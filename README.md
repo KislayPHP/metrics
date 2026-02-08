@@ -1,6 +1,20 @@
 # KislayPHP Metrics
 
-Metrics extension for KislayPHP.
+KislayPHP Metrics provides in-memory counters for lightweight telemetry during development.
+
+## Key Features
+
+- Increment and read counters.
+- Simple API with minimal overhead.
+
+## Use Cases
+
+- Track request counts in local services.
+- Quick instrumentation for demos.
+
+## SEO Keywords
+
+PHP metrics, counters, telemetry, in-memory metrics, C++ PHP extension
 
 ## Repository
 
