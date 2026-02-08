@@ -1,6 +1,19 @@
-# kislayphp_metrics
+# KislayPHP Metrics
 
 Metrics extension for KislayPHP.
+
+## Repository
+
+- https://github.com/KislayPHP/metrics
+
+## Related Modules
+
+- https://github.com/KislayPHP/core
+- https://github.com/KislayPHP/eventbus
+- https://github.com/KislayPHP/discovery
+- https://github.com/KislayPHP/gateway
+- https://github.com/KislayPHP/config
+- https://github.com/KislayPHP/queue
 
 ## Build
 
@@ -13,7 +26,7 @@ make
 ## Run Locally
 
 ```sh
-cd /path/to/phpExtension/kislayphp_metrics
+cd /path/to/metrics
 php -d extension=modules/kislayphp_metrics.so example.php
 ```
 
