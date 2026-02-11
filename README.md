@@ -29,7 +29,21 @@ PHP metrics, counters, telemetry, in-memory metrics, C++ PHP extension, microser
 - https://github.com/KislayPHP/config
 - https://github.com/KislayPHP/queue
 
-## Build
+## Installation
+
+### Via PECL
+
+```bash
+pecl install kislayphp_metrics
+```
+
+Then add to your php.ini:
+
+```ini
+extension=kislayphp_metrics.so
+```
+
+### Manual Build
 
 ```sh
 phpize

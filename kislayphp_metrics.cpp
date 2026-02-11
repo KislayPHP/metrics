@@ -9,6 +9,7 @@ extern "C" {
 #include "php_kislayphp_metrics.h"
 
 #include <cstring>
+#include <pthread.h>
 #include <string>
 #include <unordered_map>
 
@@ -60,10 +61,11 @@ static zend_class_entry *kislayphp_metrics_ce;
 static zend_class_entry *kislayphp_metrics_client_ce;
 
 typedef struct _php_kislayphp_metrics_t {
-    zend_object std;
     std::unordered_map<std::string, zend_long> counters;
+    pthread_mutex_t lock;
     zval client;
     bool has_client;
+    zend_object std;
 } php_kislayphp_metrics_t;
 
 static zend_object_handlers kislayphp_metrics_handlers;
@@ -79,6 +81,7 @@ static zend_object *kislayphp_metrics_create_object(zend_class_entry *ce) {
     zend_object_std_init(&obj->std, ce);
     object_properties_init(&obj->std, ce);
     new (&obj->counters) std::unordered_map<std::string, zend_long>();
+    pthread_mutex_init(&obj->lock, nullptr);
     ZVAL_UNDEF(&obj->client);
     obj->has_client = false;
     obj->std.handlers = &kislayphp_metrics_handlers;
@@ -91,6 +94,7 @@ static void kislayphp_metrics_free_obj(zend_object *object) {
         zval_ptr_dtor(&obj->client);
     }
     obj->counters.~unordered_map();
+    pthread_mutex_destroy(&obj->lock);
     zend_object_std_dtor(&obj->std);
 }
 
@@ -171,7 +175,9 @@ PHP_METHOD(KislayPHPMetrics, inc) {
         return;
     }
 
+    pthread_mutex_lock(&obj->lock);
     obj->counters[std::string(name, name_len)] += by;
+    pthread_mutex_unlock(&obj->lock);
     RETURN_TRUE;
 }
 
@@ -199,11 +205,19 @@ PHP_METHOD(KislayPHPMetrics, get) {
         return;
     }
 
+    zend_long value = 0;
+    bool found = false;
+    pthread_mutex_lock(&obj->lock);
     auto it = obj->counters.find(std::string(name, name_len));
-    if (it == obj->counters.end()) {
+    if (it != obj->counters.end()) {
+        value = it->second;
+        found = true;
+    }
+    pthread_mutex_unlock(&obj->lock);
+    if (!found) {
         RETURN_LONG(0);
     }
-    RETURN_LONG(it->second);
+    RETURN_LONG(value);
 }
 
 PHP_METHOD(KislayPHPMetrics, all) {
@@ -222,9 +236,11 @@ PHP_METHOD(KislayPHPMetrics, all) {
     }
 
     array_init(return_value);
+    pthread_mutex_lock(&obj->lock);
     for (const auto &entry : obj->counters) {
         add_assoc_long(return_value, entry.first.c_str(), entry.second);
     }
+    pthread_mutex_unlock(&obj->lock);
 }
 
 static const zend_function_entry kislayphp_metrics_methods[] = {
