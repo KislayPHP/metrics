@@ -5,7 +5,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/KislayPHP/metrics/ci.yml)](https://github.com/KislayPHP/metrics/actions)
 [![codecov](https://codecov.io/gh/KislayPHP/metrics/branch/main/graph/badge.svg)](https://codecov.io/gh/KislayPHP/metrics)
 
-A high-performance C++ PHP extension providing comprehensive metrics collection, monitoring, and observability for microservices with support for Prometheus, StatsD, and custom backends.
+A high-performance C++ PHP extension providing comprehensive metrics collection, monitoring, and observability for microservices with support for Prometheus, StatsD, and custom backends. Perfect for PHP echo system integration and modern microservices architecture.
 
 ## ⚡ Key Features
 
@@ -17,6 +17,8 @@ A high-performance C++ PHP extension providing comprehensive metrics collection,
 - 📝 **Logging**: Structured metrics logging and export
 - 🔍 **Querying**: Metrics querying and filtering
 - 🌐 **Distributed**: Cross-service metrics aggregation
+- 🔄 **PHP Echo System**: Seamless integration with PHP ecosystem and frameworks
+- 🌐 **Microservices Architecture**: Designed for distributed PHP applications
 
 ## 📦 Installation
 
@@ -305,6 +307,10 @@ Licensed under the [Apache License 2.0](LICENSE).
 - 🐛 [Issue Tracker](https://github.com/KislayPHP/metrics/issues)
 - 💬 [Discussions](https://github.com/KislayPHP/metrics/discussions)
 - 📧 [Security Issues](.github/SECURITY.md)
+
+## SEO Keywords
+
+PHP, microservices, PHP echo system, PHP extension, C++ PHP extension, PHP metrics, PHP monitoring, PHP observability, PHP Prometheus, PHP StatsD, PHP InfluxDB, PHP telemetry, PHP performance monitoring
 
 ## 📈 Roadmap
 
