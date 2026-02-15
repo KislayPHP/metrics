@@ -2,7 +2,14 @@
 // Run from this folder with:
 // php -d extension=modules/kislayphp_metrics.so example.php
 
-extension_loaded('kislayphp_metrics') or die('kislayphp_metrics not loaded');
+function fail(string $message): void {
+	echo "FAIL: {$message}\n";
+	exit(1);
+}
+
+if (!extension_loaded('kislayphp_metrics')) {
+	fail('kislayphp_metrics not loaded');
+}
 
 $metrics = new KislayPHP\Metrics\Metrics();
 
@@ -23,12 +30,19 @@ class ArrayMetricsClient implements KislayPHP\Metrics\ClientInterface {
 	}
 }
 
-$use_client = false;
-if ($use_client) {
-	$metrics->setClient(new ArrayMetricsClient());
-}
+$metrics->setClient(new ArrayMetricsClient());
+
 $metrics->inc('requests');
 $metrics->inc('requests', 2);
 
-var_dump($metrics->get('requests'));
-print_r($metrics->all());
+$value = $metrics->get('requests');
+if ($value !== 3) {
+	fail('requests counter mismatch');
+}
+
+$all = $metrics->all();
+if (!is_array($all) || ($all['requests'] ?? null) !== 3) {
+	fail('all() missing requests counter');
+}
+
+echo "OK: metrics example passed\n";

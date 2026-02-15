@@ -114,6 +114,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_kislayphp_metrics_set_client, 0, 0, 1)
     ZEND_ARG_OBJ_INFO(0, client, KislayPHP\\Metrics\\ClientInterface, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_kislayphp_metrics_reset, 0, 0, 0)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(KislayPHPMetrics, __construct) {
     ZEND_PARSE_PARAMETERS_NONE();
 }
@@ -243,12 +247,96 @@ PHP_METHOD(KislayPHPMetrics, all) {
     pthread_mutex_unlock(&obj->lock);
 }
 
+PHP_METHOD(KislayPHPMetrics, dec) {
+    char *name = nullptr;
+    size_t name_len = 0;
+    zend_long by = 1;
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(name, name_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(by)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (by < 0) {
+        by = -by;
+    }
+
+    php_kislayphp_metrics_t *obj = php_kislayphp_metrics_from_obj(Z_OBJ_P(getThis()));
+    if (obj->has_client) {
+        zval name_zv;
+        zval by_zv;
+        ZVAL_STRINGL(&name_zv, name, name_len);
+        ZVAL_LONG(&by_zv, -by);
+
+        zval retval;
+        ZVAL_UNDEF(&retval);
+        zend_call_method_with_2_params(Z_OBJ(obj->client), Z_OBJCE(obj->client), nullptr, "inc", &retval, &name_zv, &by_zv);
+
+        zval_ptr_dtor(&name_zv);
+        zval_ptr_dtor(&by_zv);
+
+        if (Z_ISUNDEF(retval)) {
+            RETURN_TRUE;
+        }
+        RETVAL_ZVAL(&retval, 1, 1);
+        return;
+    }
+
+    pthread_mutex_lock(&obj->lock);
+    obj->counters[std::string(name, name_len)] -= by;
+    pthread_mutex_unlock(&obj->lock);
+    RETURN_TRUE;
+}
+
+PHP_METHOD(KislayPHPMetrics, reset) {
+    char *name = nullptr;
+    size_t name_len = 0;
+    bool has_name = false;
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_STRING(name, name_len)
+    ZEND_PARSE_PARAMETERS_END();
+    if (ZEND_NUM_ARGS() == 1) {
+        has_name = true;
+    }
+
+    php_kislayphp_metrics_t *obj = php_kislayphp_metrics_from_obj(Z_OBJ_P(getThis()));
+    if (obj->has_client && has_name) {
+        zval name_zv;
+        zval zero_zv;
+        ZVAL_STRINGL(&name_zv, name, name_len);
+        ZVAL_LONG(&zero_zv, 0);
+
+        zval retval;
+        ZVAL_UNDEF(&retval);
+        zend_call_method_with_2_params(Z_OBJ(obj->client), Z_OBJCE(obj->client), nullptr, "inc", &retval, &name_zv, &zero_zv);
+
+        zval_ptr_dtor(&name_zv);
+        zval_ptr_dtor(&zero_zv);
+        if (!Z_ISUNDEF(retval)) {
+            zval_ptr_dtor(&retval);
+        }
+        RETURN_TRUE;
+    }
+
+    pthread_mutex_lock(&obj->lock);
+    if (has_name) {
+        obj->counters[std::string(name, name_len)] = 0;
+    } else {
+        obj->counters.clear();
+    }
+    pthread_mutex_unlock(&obj->lock);
+    RETURN_TRUE;
+}
+
 static const zend_function_entry kislayphp_metrics_methods[] = {
     PHP_ME(KislayPHPMetrics, __construct, arginfo_kislayphp_metrics_void, ZEND_ACC_PUBLIC)
     PHP_ME(KislayPHPMetrics, setClient, arginfo_kislayphp_metrics_set_client, ZEND_ACC_PUBLIC)
     PHP_ME(KislayPHPMetrics, inc, arginfo_kislayphp_metrics_inc, ZEND_ACC_PUBLIC)
+    PHP_ME(KislayPHPMetrics, dec, arginfo_kislayphp_metrics_inc, ZEND_ACC_PUBLIC)
     PHP_ME(KislayPHPMetrics, get, arginfo_kislayphp_metrics_get, ZEND_ACC_PUBLIC)
     PHP_ME(KislayPHPMetrics, all, arginfo_kislayphp_metrics_void, ZEND_ACC_PUBLIC)
+    PHP_ME(KislayPHPMetrics, reset, arginfo_kislayphp_metrics_reset, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
