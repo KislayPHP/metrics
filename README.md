@@ -22,10 +22,10 @@ A high-performance C++ PHP extension providing comprehensive metrics collection,
 
 ## 📦 Installation
 
-### Via PECL (Recommended)
+### Via PIE (Recommended)
 
 ```bash
-pecl install kislayphp_metrics
+pie install kislayphp/metrics
 ```
 
 Add to your `php.ini`:
@@ -49,7 +49,6 @@ sudo make install
 
 ```dockerfile
 FROM php:8.2-cli
-RUN pecl install kislayphp_metrics && docker-php-ext-enable kislayphp_metrics
 ```
 
 ## 🚀 Quick Start

@@ -21,9 +21,9 @@ The extension uses a client interface allowing different metrics backends:
 
 ## Installation
 
-### Via PECL
+### Via PIE
 ```bash
-pecl install kislayphp_metrics
+pie install kislayphp/metrics
 ```
 
 ### Manual Build
