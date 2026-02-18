@@ -820,7 +820,7 @@ $app->get('/dashboard', function($req, $res) use ($dashboard) {
 
 ## Integration Examples
 
-### Laravel Integration
+### KislayPHP Integration
 ```php
 <?php
 // config/kislay.php
@@ -829,7 +829,7 @@ return [
         'client' => env('METRICS_CLIENT', 'prometheus'),
         'prometheus' => [
             'gateway_url' => env('PROMETHEUS_PUSHGATEWAY_URL'),
-            'job_name' => env('APP_NAME', 'laravel-app')
+            'job_name' => env('APP_NAME', 'kislay-app')
         ],
         'statsd' => [
             'host' => env('STATSD_HOST', 'localhost'),
@@ -892,7 +892,7 @@ class MetricsMiddleware {
 }
 ```
 
-### Symfony Integration
+### Framework Integration
 ```php
 <?php
 // src/Service/KislayMetrics.php
@@ -906,7 +906,7 @@ class KislayMetrics extends Metrics {
         parent::__construct();
 
         if ($pushgatewayUrl) {
-            $client = new PrometheusPushgatewayClient($pushgatewayUrl, $jobName ?: 'symfony-app');
+            $client = new PrometheusPushgatewayClient($pushgatewayUrl, $jobName ?: 'kislay-app');
             $this->setClient($client);
         }
     }
