@@ -7,6 +7,9 @@
 
 A high-performance C++ PHP extension providing comprehensive metrics collection, monitoring, and observability for microservices with support for Prometheus, StatsD, and custom backends. Perfect for PHP ecosystem integration and modern microservices architecture.
 
+Primary runtime namespace is `Kislay\Metrics` (legacy `KislayPHP\Metrics` aliases are kept for compatibility).
+For service-to-service instrumentation, see `SERVICE_COMMUNICATION.md` and `service_communication.php`.
+
 ## ⚡ Key Features
 
 - 🚀 **High Performance**: Ultra-low latency metrics collection

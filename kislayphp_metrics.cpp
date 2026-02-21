@@ -302,7 +302,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_kislayphp_metrics_get, 0, 0, 1)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_kislayphp_metrics_set_client, 0, 0, 1)
-    ZEND_ARG_OBJ_INFO(0, client, KislayPHP\\Metrics\\ClientInterface, 0)
+    ZEND_ARG_OBJ_INFO(0, client, Kislay\\Metrics\\ClientInterface, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_kislayphp_metrics_reset, 0, 0, 0)
@@ -325,7 +325,7 @@ PHP_METHOD(KislayPHPMetrics, setClient) {
     }
 
     if (!instanceof_function(Z_OBJCE_P(client), kislayphp_metrics_client_ce)) {
-        zend_throw_exception(zend_ce_exception, "Client must implement KislayPHP\\Metrics\\ClientInterface", 0);
+        zend_throw_exception(zend_ce_exception, "Client must implement Kislay\\Metrics\\ClientInterface", 0);
         RETURN_FALSE;
     }
 
@@ -587,10 +587,13 @@ static const zend_function_entry kislayphp_metrics_client_methods[] = {
 
 PHP_MINIT_FUNCTION(kislayphp_metrics) {
     zend_class_entry ce;
-    INIT_NS_CLASS_ENTRY(ce, "KislayPHP\\Metrics", "ClientInterface", kislayphp_metrics_client_methods);
+    INIT_NS_CLASS_ENTRY(ce, "Kislay\\Metrics", "ClientInterface", kislayphp_metrics_client_methods);
     kislayphp_metrics_client_ce = zend_register_internal_interface(&ce);
-    INIT_NS_CLASS_ENTRY(ce, "KislayPHP\\Metrics", "Metrics", kislayphp_metrics_methods);
+    zend_register_class_alias("KislayPHP\\Metrics\\ClientInterface", kislayphp_metrics_client_ce);
+
+    INIT_NS_CLASS_ENTRY(ce, "Kislay\\Metrics", "Metrics", kislayphp_metrics_methods);
     kislayphp_metrics_ce = zend_register_internal_class(&ce);
+    zend_register_class_alias("KislayPHP\\Metrics\\Metrics", kislayphp_metrics_ce);
     kislayphp_metrics_ce->create_object = kislayphp_metrics_create_object;
     std::memcpy(&kislayphp_metrics_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     kislayphp_metrics_handlers.offset = XtOffsetOf(php_kislayphp_metrics_t, std);

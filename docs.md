@@ -1,5 +1,8 @@
 # KislayPHP Metrics Extension Documentation
 
+Primary namespace is `Kislay\Metrics` with backward-compatible aliases under `KislayPHP\Metrics`.
+See `SERVICE_COMMUNICATION.md` for inter-service metrics patterns.
+
 ## Overview
 
 The KislayPHP Metrics extension provides high-performance application metrics collection and monitoring capabilities. It supports counters, histograms, and gauges with pluggable client interfaces for external metrics backends like Prometheus, StatsD, or DataDog.

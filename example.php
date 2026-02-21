@@ -11,9 +11,9 @@ if (!extension_loaded('kislayphp_metrics')) {
 	fail('kislayphp_metrics not loaded');
 }
 
-$metrics = new KislayPHP\Metrics\Metrics();
+$metrics = new Kislay\Metrics\Metrics();
 
-class ArrayMetricsClient implements KislayPHP\Metrics\ClientInterface {
+class ArrayMetricsClient implements Kislay\Metrics\ClientInterface {
 	private array $counters = [];
 
 	public function inc(string $name, ?int $by = 1): bool {
