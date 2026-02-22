@@ -190,6 +190,8 @@ print_r($allMetrics);
 ## 📚 Documentation
 
 📖 **[Complete Documentation](docs.md)** - API reference, backend integrations, configuration options, and best practices
+- 📘 **[Class Reference](CLASS_REFERENCE.md)** - Metrics classes and method behavior
+- 🚀 **[Deployment Guide](https://github.com/KislayPHP/core/blob/main/docs/DEPLOYMENT_GUIDE_MULTI_ENV.md)** - Docker/AWS/cloud/on-prem runbook
 
 ## 🏗️ Architecture
 
