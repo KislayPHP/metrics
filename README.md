@@ -28,7 +28,7 @@ For service-to-service instrumentation, see `SERVICE_COMMUNICATION.md` and `serv
 ### Via PIE (Recommended)
 
 ```bash
-pie install kislayphp/metrics
+pie install kislayphp/metrics:0.0.2
 ```
 
 Add to your `php.ini`:

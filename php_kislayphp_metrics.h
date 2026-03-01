@@ -5,7 +5,7 @@ extern "C" {
 #include "php.h"
 }
 
-#define PHP_KISLAYPHP_METRICS_VERSION "0.0.1"
+#define PHP_KISLAYPHP_METRICS_VERSION "0.0.2"
 #define PHP_KISLAYPHP_METRICS_EXTNAME "kislayphp_metrics"
 
 extern zend_module_entry kislayphp_metrics_module_entry;
