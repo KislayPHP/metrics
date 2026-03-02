@@ -3,6 +3,7 @@ PHP_ARG_ENABLE(kislayphp_metrics, whether to enable kislayphp_metrics,
 
 if test "$PHP_KISLAYPHP_METRICS" != "no"; then
   PHP_REQUIRE_CXX()
+  PHP_ADD_LIBRARY(stdc++,, KISLAYPHP_METRICS_SHARED_LIBADD)
   if test -f ../rpc/gen/platform.pb.cc; then
     RPC_GEN_DIR=`pwd`/../rpc/gen
     PHP_ADD_INCLUDE($RPC_GEN_DIR)
@@ -18,4 +19,5 @@ if test "$PHP_KISLAYPHP_METRICS" != "no"; then
   fi
 
   PHP_NEW_EXTENSION(kislayphp_metrics, kislayphp_metrics.cpp $RPC_SRCS, $ext_shared)
+  PHP_SUBST(KISLAYPHP_METRICS_SHARED_LIBADD)
 fi
