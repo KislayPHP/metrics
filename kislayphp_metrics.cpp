@@ -10,7 +10,6 @@ extern "C" {
 
 #include <chrono>
 #include <cstring>
-#include <pthread.h>
 #include <cstdlib>
 #include <mutex>
 #include <string>
@@ -253,7 +252,7 @@ static bool kislayphp_rpc_metrics_reset(const std::string &name, bool reset_all,
 
 typedef struct _php_kislayphp_metrics_t {
     std::unordered_map<std::string, zend_long> counters;
-    pthread_mutex_t lock;
+    std::mutex lock;  // replaces pthread_mutex_t for consistency
     zval client;
     bool has_client;
     zend_object std;
@@ -272,7 +271,7 @@ static zend_object *kislayphp_metrics_create_object(zend_class_entry *ce) {
     zend_object_std_init(&obj->std, ce);
     object_properties_init(&obj->std, ce);
     new (&obj->counters) std::unordered_map<std::string, zend_long>();
-    pthread_mutex_init(&obj->lock, nullptr);
+    new (&obj->lock) std::mutex();
     ZVAL_UNDEF(&obj->client);
     obj->has_client = false;
     obj->std.handlers = &kislayphp_metrics_handlers;
@@ -285,7 +284,7 @@ static void kislayphp_metrics_free_obj(zend_object *object) {
         zval_ptr_dtor(&obj->client);
     }
     obj->counters.~unordered_map();
-    pthread_mutex_destroy(&obj->lock);
+    obj->lock.~mutex();
     zend_object_std_dtor(&obj->std);
 }
 
@@ -379,9 +378,9 @@ PHP_METHOD(KislayPHPMetrics, inc) {
     }
 #endif
 
-    pthread_mutex_lock(&obj->lock);
+    { std::lock_guard<std::mutex> _mg(obj->lock);
     obj->counters[std::string(name, name_len)] += by;
-    pthread_mutex_unlock(&obj->lock);
+    } // unlock
     RETURN_TRUE;
 }
 
@@ -421,13 +420,13 @@ PHP_METHOD(KislayPHPMetrics, get) {
 
     zend_long value = 0;
     bool found = false;
-    pthread_mutex_lock(&obj->lock);
+    { std::lock_guard<std::mutex> _mg(obj->lock);
     auto it = obj->counters.find(std::string(name, name_len));
     if (it != obj->counters.end()) {
         value = it->second;
         found = true;
     }
-    pthread_mutex_unlock(&obj->lock);
+    } // unlock
     if (!found) {
         RETURN_LONG(0);
     }
@@ -459,11 +458,11 @@ PHP_METHOD(KislayPHPMetrics, all) {
 #endif
 
     array_init(return_value);
-    pthread_mutex_lock(&obj->lock);
+    { std::lock_guard<std::mutex> _mg(obj->lock);
     for (const auto &entry : obj->counters) {
         add_assoc_long(return_value, entry.first.c_str(), entry.second);
     }
-    pthread_mutex_unlock(&obj->lock);
+    } // unlock
 }
 
 PHP_METHOD(KislayPHPMetrics, dec) {
@@ -485,11 +484,11 @@ PHP_METHOD(KislayPHPMetrics, dec) {
         zval name_zv;
         zval by_zv;
         ZVAL_STRINGL(&name_zv, name, name_len);
-        ZVAL_LONG(&by_zv, -by);
+        ZVAL_LONG(&by_zv, by);  // positive — client dec() handles direction
 
         zval retval;
         ZVAL_UNDEF(&retval);
-        zend_call_method_with_2_params(Z_OBJ(obj->client), Z_OBJCE(obj->client), nullptr, "inc", &retval, &name_zv, &by_zv);
+        zend_call_method_with_2_params(Z_OBJ(obj->client), Z_OBJCE(obj->client), nullptr, "dec", &retval, &name_zv, &by_zv);
 
         zval_ptr_dtor(&name_zv);
         zval_ptr_dtor(&by_zv);
@@ -510,9 +509,9 @@ PHP_METHOD(KislayPHPMetrics, dec) {
     }
 #endif
 
-    pthread_mutex_lock(&obj->lock);
+    { std::lock_guard<std::mutex> _mg(obj->lock);
     obj->counters[std::string(name, name_len)] -= by;
-    pthread_mutex_unlock(&obj->lock);
+    } // unlock
     RETURN_TRUE;
 }
 
@@ -529,18 +528,18 @@ PHP_METHOD(KislayPHPMetrics, reset) {
     }
 
     php_kislayphp_metrics_t *obj = php_kislayphp_metrics_from_obj(Z_OBJ_P(getThis()));
-    if (obj->has_client && has_name) {
-        zval name_zv;
-        zval zero_zv;
-        ZVAL_STRINGL(&name_zv, name, name_len);
-        ZVAL_LONG(&zero_zv, 0);
-
+    if (obj->has_client) {
+        // Call client's reset() method — works for both named and global reset
         zval retval;
         ZVAL_UNDEF(&retval);
-        zend_call_method_with_2_params(Z_OBJ(obj->client), Z_OBJCE(obj->client), nullptr, "inc", &retval, &name_zv, &zero_zv);
-
-        zval_ptr_dtor(&name_zv);
-        zval_ptr_dtor(&zero_zv);
+        if (has_name) {
+            zval name_zv;
+            ZVAL_STRINGL(&name_zv, name, name_len);
+            zend_call_method_with_1_params(Z_OBJ(obj->client), Z_OBJCE(obj->client), nullptr, "reset", &retval, &name_zv);
+            zval_ptr_dtor(&name_zv);
+        } else {
+            zend_call_method_with_0_params(Z_OBJ(obj->client), Z_OBJCE(obj->client), nullptr, "reset", &retval);
+        }
         if (!Z_ISUNDEF(retval)) {
             zval_ptr_dtor(&retval);
         }
@@ -557,13 +556,13 @@ PHP_METHOD(KislayPHPMetrics, reset) {
     }
 #endif
 
-    pthread_mutex_lock(&obj->lock);
+    { std::lock_guard<std::mutex> _mg(obj->lock);
     if (has_name) {
         obj->counters[std::string(name, name_len)] = 0;
     } else {
         obj->counters.clear();
     }
-    pthread_mutex_unlock(&obj->lock);
+    } // unlock
     RETURN_TRUE;
 }
 
@@ -579,9 +578,11 @@ static const zend_function_entry kislayphp_metrics_methods[] = {
 };
 
 static const zend_function_entry kislayphp_metrics_client_methods[] = {
-    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, inc, arginfo_kislayphp_metrics_inc)
-    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, get, arginfo_kislayphp_metrics_get)
-    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, all, arginfo_kislayphp_metrics_void)
+    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, inc,   arginfo_kislayphp_metrics_inc)
+    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, dec,   arginfo_kislayphp_metrics_inc)
+    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, get,   arginfo_kislayphp_metrics_get)
+    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, all,   arginfo_kislayphp_metrics_void)
+    ZEND_ABSTRACT_ME(KislayPHPMetricsClientInterface, reset, arginfo_kislayphp_metrics_reset)
     PHP_FE_END
 };
 

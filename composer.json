@@ -53,5 +53,10 @@
     "php-ext": {
         "extension-name": "kislayphp_metrics",
         "configure-options": []
+    },
+    "autoload": {
+        "psr-4": {
+            "Kislay\\Metrics\\": "src/"
+        }
     }
 }
