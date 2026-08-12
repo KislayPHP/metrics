@@ -421,7 +421,10 @@ PHP_METHOD(KislayPHPMetrics, get) {
         zend_long value = 0;
         std::string error;
         if (kislayphp_rpc_metrics_get(std::string(name, name_len), &value, &error)) {
-            RETURN_LONG(value);
+            // README documents Counter::get()/Gauge::get() as returning float;
+            // internal storage stays zend_long (a counter/gauge value is always
+            // a whole increment count), only the PHP-visible return is a double.
+            RETURN_DOUBLE((double)value);
         }
     }
 #endif
@@ -436,9 +439,9 @@ PHP_METHOD(KislayPHPMetrics, get) {
     }
     } // unlock
     if (!found) {
-        RETURN_LONG(0);
+        RETURN_DOUBLE(0.0);
     }
-    RETURN_LONG(value);
+    RETURN_DOUBLE((double)value);
 }
 
 PHP_METHOD(KislayPHPMetrics, all) {
@@ -711,7 +714,7 @@ PHP_METHOD(KislayPHPCounter, get) {
     ZVAL_UNDEF(&retval);
     zend_call_method_with_1_params(Z_OBJ_P(m), Z_OBJCE_P(m), nullptr, "get", &retval, &name_zv);
     zval_ptr_dtor(&name_zv);
-    if (Z_ISUNDEF(retval)) { RETURN_LONG(0); }
+    if (Z_ISUNDEF(retval)) { RETURN_DOUBLE(0.0); }
     RETVAL_ZVAL(&retval, 1, 1);
 }
 
@@ -897,7 +900,7 @@ PHP_METHOD(KislayPHPGauge, get) {
     ZVAL_UNDEF(&retval);
     zend_call_method_with_1_params(Z_OBJ_P(m), Z_OBJCE_P(m), nullptr, "get", &retval, &name_zv);
     zval_ptr_dtor(&name_zv);
-    if (Z_ISUNDEF(retval)) { RETURN_LONG(0); }
+    if (Z_ISUNDEF(retval)) { RETURN_DOUBLE(0.0); }
     RETVAL_ZVAL(&retval, 1, 1);
 }
 
@@ -1440,6 +1443,34 @@ PHP_METHOD(KislayPHPCollector, histogram) {
     } // unlock
 }
 
+// README documents this as a convenience method; the compiled extension
+// previously had no such method at all (Call to undefined method) - Timer
+// had to be constructed directly against a Histogram instance. Mirrors
+// histogram()'s lookup-or-create pattern by delegating to the real,
+// PHP-visible histogram() method (so namespacing/caching stay identical to
+// calling ->histogram() directly), then wraps the result in a fresh Timer.
+PHP_METHOD(KislayPHPCollector, timer) {
+    char *name = nullptr;
+    size_t name_len = 0;
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STRING(name, name_len)
+    ZEND_PARSE_PARAMETERS_END();
+
+    zval name_zv, hist_zv;
+    ZVAL_STRINGL(&name_zv, name, name_len);
+    ZVAL_UNDEF(&hist_zv);
+    zend_call_method_with_1_params(Z_OBJ_P(getThis()), Z_OBJCE_P(getThis()), nullptr, "histogram", &hist_zv, &name_zv);
+
+    object_init_ex(return_value, kislayphp_timer_ce);
+    zval ctor_retval;
+    ZVAL_UNDEF(&ctor_retval);
+    zend_call_method_with_2_params(Z_OBJ_P(return_value), kislayphp_timer_ce, nullptr, "__construct", &ctor_retval, &name_zv, &hist_zv);
+    if (!Z_ISUNDEF(ctor_retval)) { zval_ptr_dtor(&ctor_retval); }
+
+    zval_ptr_dtor(&name_zv);
+    if (!Z_ISUNDEF(hist_zv)) { zval_ptr_dtor(&hist_zv); }
+}
+
 PHP_METHOD(KislayPHPCollector, export) {
     ZEND_PARSE_PARAMETERS_NONE();
     php_kislayphp_collector_t *obj = php_kislayphp_collector_from_obj(Z_OBJ_P(getThis()));
@@ -1491,6 +1522,7 @@ static const zend_function_entry kislayphp_collector_methods[] = {
     PHP_ME(KislayPHPCollector, counter,     arginfo_kislayphp_collector_named,     ZEND_ACC_PUBLIC)
     PHP_ME(KislayPHPCollector, gauge,       arginfo_kislayphp_collector_named,     ZEND_ACC_PUBLIC)
     PHP_ME(KislayPHPCollector, histogram,   arginfo_kislayphp_collector_histogram, ZEND_ACC_PUBLIC)
+    PHP_ME(KislayPHPCollector, timer,       arginfo_kislayphp_collector_named,     ZEND_ACC_PUBLIC)
     PHP_ME(KislayPHPCollector, export,      arginfo_kislayphp_metrics_void,        ZEND_ACC_PUBLIC)
     PHP_FE_END
 };

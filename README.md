@@ -59,10 +59,12 @@ $start = microtime(true);
 $metrics->histogram('request_duration_seconds')
         ->observe(microtime(true) - $start);
 
-// Timer (convenience wrapper for histogram)
-$timer = $metrics->timer('db_query_seconds')->start();
+// Timer (convenience wrapper for histogram) — start()/stop() on the same
+// object; start() returns void, not a chainable handle.
+$timer = $metrics->timer('db_query_seconds');
+$timer->start();
 // ... run query ...
-$timer->stop();
+$timer->stop(); // records the elapsed time into the underlying histogram
 
 // Export as Prometheus text format
 $app->get('/metrics', function($req, $res) use ($metrics) {
@@ -89,9 +91,14 @@ class Collector {
 class Counter  { public function increment(float $by = 1): void; public function get(): float; }
 class Gauge    { public function set(float $value): void; public function increment(float $by = 1): void; public function decrement(float $by = 1): void; public function get(): float; }
 class Histogram { public function observe(float $value): void; }
-class Timer    { public function start(): TimerHandle; }
-class TimerHandle { public function stop(): float; }
+class Timer    { public function __construct(string $name, Histogram $histogram); public function start(): void; public function stop(): float; public function record(float $ms): void; }
 ```
+
+Note: `Counter::get()`/`Gauge::get()` genuinely return `float` (fixed 2026-08-12 — previously returned `int` despite this signature). `Collector::timer()` (also added 2026-08-12) constructs and returns a real `Timer` bound to a lazily-created/looked-up `Histogram` of the same name, same lookup-or-create semantics as `counter()`/`gauge()`/`histogram()`.
+
+Known gap: the `labels` parameter shown above on `counter()`/`gauge()`/`histogram()`/`timer()` is accepted syntactically but not implemented — labels are not attached to the exported series. Don't rely on it for cardinality/dimensioning yet.
+
+`start()` returns `void`, not a chainable handle — call `start()`/`stop()` on the same `Timer` instance (there is no separate `TimerHandle` class). `stop()` returns the elapsed milliseconds AND records that value into the underlying `Histogram` automatically.
 
 Legacy aliases: `KislayPHP\Metrics\*`
 
